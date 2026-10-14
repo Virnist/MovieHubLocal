@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { InstallAppButton } from "./InstallAppButton";
 import { SUPPORTED_LANGUAGES, type AppLanguage } from "../i18n";
 import type { AppSettings } from "../services/library";
 
@@ -181,7 +182,13 @@ export function SettingsPanel({
 
       <form onSubmit={handleSubmit} className="space-y-6 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 sm:p-7">
         {isFirstRun && (
-          <p className="text-zinc-300">{t("welcomeDescription")}</p>
+          <div className="space-y-4">
+            <p className="text-zinc-300">{t("welcomeDescription")}</p>
+            <div className="rounded-xl border border-zinc-700 bg-zinc-950/70 p-4">
+              <p className="mb-3 text-sm text-zinc-300">{t("installOnFirstVisit")}</p>
+              <InstallAppButton />
+            </div>
+          </div>
         )}
         <input
           ref={folderInput}

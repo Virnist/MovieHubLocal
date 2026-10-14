@@ -328,13 +328,15 @@ export default function App() {
           unmatchedFiles={unmatchedFiles}
           isFirstRun={isFirstRun}
           isRescanning={isScanning}
-          onBrowseFolder={async (files) => {
-            const selectedPath = await selectLibraryFiles(files);
+          onBrowseFolder={async (files, selection) => {
+            const selectedPath = await selectLibraryFiles(files, selection);
             if (selectedPath) setSettings(await getSettings());
             return selectedPath;
           }}
           onSave={handleSaveSettings}
           onLanguageChange={async (language) => {
+            const nextSettings = await saveSettings({ language });
+            setSettings(nextSettings);
             await i18nInstance.changeLanguage(language);
             setLanguageRevision((revision) => revision + 1);
           }}

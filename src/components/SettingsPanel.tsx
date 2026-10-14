@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { SUPPORTED_LANGUAGES, type AppLanguage } from "../i18n";
 import type { AppSettings } from "../services/library";
@@ -8,7 +8,7 @@ interface SettingsPanelProps {
   unmatchedFiles: string[];
   isFirstRun?: boolean;
   isRescanning?: boolean;
-  onBrowseFolder: (files: File[]) => Promise<string>;
+  onBrowseFolder: (files: File[], selection: "folder" | "files") => Promise<string>;
   onSave: (libraryPath: string, language: AppLanguage, credential: string) => Promise<void>;
   onLanguageChange: (language: AppLanguage) => Promise<void>;
   onRescan: () => Promise<void>;
@@ -36,7 +36,14 @@ export function SettingsPanel({
   const [isBrowsing, setIsBrowsing] = useState(false);
   const [message, setMessage] = useState("");
   const folderInput = useRef<HTMLInputElement>(null);
+  const videoInput = useRef<HTMLInputElement>(null);
+  const languageOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const [isLanguageListOpen, setIsLanguageListOpen] = useState(false);
+  const [focusedLanguageIndex, setFocusedLanguageIndex] = useState(
+    SUPPORTED_LANGUAGES.findIndex((option) => option.code === settings.language),
+  );
   const rescanAfterFolderSelect = useRef(false);
+  const folderSelectionType = useRef<"folder" | "files">("folder");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -68,13 +75,19 @@ export function SettingsPanel({
   }
 
   async function handleLanguageChange(nextLanguage: AppLanguage) {
-    setLanguage(nextLanguage);
-    await onLanguageChange(nextLanguage);
+    setMessage("");
+    try {
+      await onLanguageChange(nextLanguage);
+      setLanguage(nextLanguage);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not save the selected language.");
+    }
   }
 
-  function openFolderPicker(rescan = false) {
+  function openFolderPicker(rescan = false, selection: "folder" | "files" = "folder") {
     rescanAfterFolderSelect.current = rescan;
-    folderInput.current?.click();
+    folderSelectionType.current = selection;
+    (selection === "folder" ? folderInput : videoInput).current?.click();
   }
 
   async function handleFolderSelection(event: ChangeEvent<HTMLInputElement>) {
@@ -84,7 +97,7 @@ export function SettingsPanel({
     setIsBrowsing(true);
     setMessage("");
     try {
-      const selectedPath = await onBrowseFolder(files);
+      const selectedPath = await onBrowseFolder(files, folderSelectionType.current);
       setLibraryPath(selectedPath);
       if (rescanAfterFolderSelect.current) await onRescan();
     } catch (error) {
@@ -93,6 +106,33 @@ export function SettingsPanel({
       rescanAfterFolderSelect.current = false;
       setIsBrowsing(false);
     }
+  }
+
+  function handleLanguageListKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const direction = event.key === "ArrowDown" ? 1 : -1;
+      const nextIndex = Math.min(
+        SUPPORTED_LANGUAGES.length - 1,
+        Math.max(0, focusedLanguageIndex + direction),
+      );
+      setFocusedLanguageIndex(nextIndex);
+      languageOptionRefs.current[nextIndex]?.focus();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setIsLanguageListOpen(false);
+      document.getElementById("app-language")?.focus();
+    }
+  }
+
+  function openLanguageList() {
+    const selectedIndex = SUPPORTED_LANGUAGES.findIndex(
+      (option) => option.code === language,
+    );
+    const nextIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    setFocusedLanguageIndex(nextIndex);
+    setIsLanguageListOpen(true);
+    window.setTimeout(() => languageOptionRefs.current[nextIndex]?.focus(), 0);
   }
 
   return (
@@ -135,6 +175,14 @@ export function SettingsPanel({
           {...{ webkitdirectory: "" }}
           onChange={(event) => void handleFolderSelection(event)}
         />
+        <input
+          ref={videoInput}
+          type="file"
+          accept="video/*,.mkv,.mp4,.avi,.mov"
+          multiple
+          hidden
+          onChange={(event) => void handleFolderSelection(event)}
+        />
         <div>
           <label htmlFor="setup-library-path" className="mb-2 block font-semibold">
             {t("folderLabel")}
@@ -158,30 +206,68 @@ export function SettingsPanel({
             >
               {isBrowsing ? t("openingFolderPicker") : t("browseFolder")}
             </button>
+            <button
+              type="button"
+              onClick={() => openFolderPicker(false, "files")}
+              disabled={isSaving || isBrowsing}
+              className="min-h-12 rounded-lg border border-zinc-700 px-4 font-semibold text-zinc-200 outline-none hover:bg-zinc-800 focus-visible:ring-4 focus-visible:ring-red-500 disabled:opacity-60"
+            >
+              {t("chooseVideoFiles")}
+            </button>
           </div>
+          <p className="mt-2 text-sm text-zinc-400">{t("videoFilesHint")}</p>
           <p className="mt-2 text-sm text-zinc-400">{t("storageHint")}</p>
         </div>
         <div>
           <label htmlFor="app-language" className="mb-2 block font-semibold">
             {t("language")}
           </label>
-          <select
+          <button
             id="app-language"
-            value={language}
-            onChange={(event) => {
-              const option = SUPPORTED_LANGUAGES.find(
-                (candidate) => candidate.code === event.target.value,
-              );
-              if (option) void handleLanguageChange(option.code);
-            }}
-            className="min-h-12 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 text-white outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+            type="button"
+            aria-haspopup="listbox"
+            aria-controls="language-options"
+            aria-expanded={isLanguageListOpen}
+            onClick={() => isLanguageListOpen
+              ? setIsLanguageListOpen(false)
+              : openLanguageList()}
+            className="flex min-h-12 w-full items-center justify-between rounded-lg border border-zinc-700 bg-zinc-950 px-4 text-left text-white outline-none focus-visible:ring-2 focus-visible:ring-red-500"
           >
-            {SUPPORTED_LANGUAGES.map((option) => (
-              <option key={option.code} value={option.code}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <span>{SUPPORTED_LANGUAGES.find((option) => option.code === language)?.label ?? language}</span>
+            <span aria-hidden="true">▾</span>
+          </button>
+          {isLanguageListOpen && (
+            <div
+              id="language-options"
+              role="listbox"
+              aria-label={t("language")}
+              onKeyDown={handleLanguageListKeyDown}
+              className="mt-2 max-h-64 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-950 p-1"
+            >
+              {SUPPORTED_LANGUAGES.map((option, index) => (
+                <button
+                  key={option.code}
+                  ref={(element) => { languageOptionRefs.current[index] = element; }}
+                  type="button"
+                  role="option"
+                  aria-selected={language === option.code}
+                  onFocus={() => setFocusedLanguageIndex(index)}
+                  onClick={() => {
+                    setIsLanguageListOpen(false);
+                    void handleLanguageChange(option.code);
+                    document.getElementById("app-language")?.focus();
+                  }}
+                  className={`min-h-11 w-full rounded-md px-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${
+                    language === option.code
+                      ? "bg-red-600 font-semibold text-white"
+                      : "text-zinc-200 hover:bg-zinc-800"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
           <p className="mt-2 text-sm text-zinc-400">{t("languageHint")}</p>
         </div>
 
@@ -202,6 +288,26 @@ export function SettingsPanel({
             className="min-h-12 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 text-white outline-none focus-visible:ring-2 focus-visible:ring-red-500"
           />
           <p className="mt-2 text-sm text-zinc-400">{t("tmdbCredentialHint")}</p>
+          <p className="mt-2 text-sm text-zinc-400">
+            {t("tmdbRegistrationHint")}{" "}
+            <a
+              href="https://www.themoviedb.org/signup"
+              target="_blank"
+              rel="noreferrer"
+              className="text-red-300 underline underline-offset-4 hover:text-red-200"
+            >
+              {t("tmdbSignUp")}
+            </a>
+            {" · "}
+            <a
+              href="https://www.themoviedb.org/settings/api"
+              target="_blank"
+              rel="noreferrer"
+              className="text-red-300 underline underline-offset-4 hover:text-red-200"
+            >
+              {t("tmdbRequestKey")}
+            </a>
+          </p>
           <p className="mt-2 text-sm text-zinc-400">{t("fallbackCredentialHint")}</p>
           <p className="mt-2 text-sm text-zinc-300" role="status">
             {settings.apiKeyConfigured ? t("credentialConfigured") : t("credentialMissing")}

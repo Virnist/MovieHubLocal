@@ -12,6 +12,11 @@ video files to a server.
 - The browser may ask you to grant folder access again later. Choose the folder
   again in Settings if access expires or is revoked.
 - Rescan from Settings after adding, removing, or renaming files in that folder.
+- If a TV browser cannot pick a folder, use **Choose video files** instead.
+  Individually selected files remain available only for the current app session;
+  select them again after reopening MovieHub. Whether the system file picker can
+  browse USB storage or select multiple files depends on the TV browser and
+  firmware.
 - The catalog, language, playback progress, and optional TMDB credential are
   kept in this browser profile using IndexedDB. Clearing site data removes them.
 - MovieHub searches TMDB directly from the browser when you provide your own

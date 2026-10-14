@@ -301,15 +301,22 @@ export async function browseLibraryFolder(): Promise<string | null> {
   return directory.name;
 }
 
-export async function selectLibraryFiles(files: File[]): Promise<string> {
+export async function selectLibraryFiles(
+  files: File[],
+  selection: "folder" | "files" = "folder",
+): Promise<string> {
   const firstRelativePath = files.find((file) => file.webkitRelativePath)?.webkitRelativePath;
-  if (!firstRelativePath) {
+  if (selection === "folder" && !firstRelativePath) {
     throw new Error("Select a folder, not individual files.");
   }
-  const folderName = firstRelativePath.split("/")[0];
+  const folderName = firstRelativePath
+    ? firstRelativePath.split("/")[0]
+    : `Selected videos (${files.length})`;
   const selected = new Map<string, File>();
   for (const file of files) {
-    const relativePath = file.webkitRelativePath.split("/").slice(1).join("/");
+    const relativePath = file.webkitRelativePath
+      ? file.webkitRelativePath.split("/").slice(1).join("/")
+      : file.name;
     if (relativePath && VIDEO_EXTENSIONS.has(extensionOf(file.name))) {
       selected.set(relativePath, file);
     }

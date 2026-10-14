@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { isAndroidTvApp } from "../services/androidTv";
 
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -28,7 +29,7 @@ export function InstallAppButton() {
     };
   }, []);
 
-  if (isInstalled) return null;
+  if (isInstalled || isAndroidTvApp()) return null;
 
   async function handleInstall() {
     if (!installPrompt) {

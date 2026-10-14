@@ -52,7 +52,7 @@ export function MoviePlayer({ movie }: MoviePlayerProps) {
       });
     return () => {
       controller.abort();
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      if (objectUrl?.startsWith("blob:")) URL.revokeObjectURL(objectUrl);
     };
   }, [movie.relativePath, t]);
 

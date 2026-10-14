@@ -1,5 +1,9 @@
 import type { AppLanguage } from "../i18n";
 import { cleanVideoFilename } from "../lib/filename";
+import {
+  requestAndroidFolder,
+  type AndroidVideoFile,
+} from "./androidTv";
 
 export interface AppSettings {
   language: AppLanguage;
@@ -194,6 +198,7 @@ const DEFAULT_SETTINGS: PersistedSettings = {
 
 let databasePromise: Promise<IDBDatabase> | undefined;
 let selectedVideoFiles = new Map<string, File>();
+let androidVideoFiles = new Map<string, AndroidVideoFile>();
 
 function openDatabase(): Promise<IDBDatabase> {
   if (!databasePromise) {
@@ -326,6 +331,7 @@ export async function selectLibraryFiles(
   }
 
   selectedVideoFiles = selected;
+  androidVideoFiles = new Map();
   const settings = await loadSettings();
   settings.libraryPath = folderName;
   settings.setupComplete = false;
@@ -334,6 +340,7 @@ export async function selectLibraryFiles(
     const transaction = database.transaction(STORE_NAME, "readwrite");
     const store = transaction.objectStore(STORE_NAME);
     store.delete("directory");
+    store.delete("androidVideoFiles");
     store.put(settings, "settings");
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error ?? new Error("Could not save the selected folder."));
@@ -342,10 +349,58 @@ export async function selectLibraryFiles(
   return folderName;
 }
 
+export async function selectAndroidLibraryFolder(): Promise<string | null> {
+  const selection = await requestAndroidFolder();
+  if (!selection) return null;
+
+  const selected = new Map<string, AndroidVideoFile>();
+  for (const file of selection.files) {
+    if (VIDEO_EXTENSIONS.has(extensionOf(file.name))) {
+      selected.set(file.relativePath, file);
+    }
+  }
+  if (selected.size === 0) {
+    throw new Error("No supported video files were found in that folder.");
+  }
+
+  const settings = await loadSettings();
+  settings.libraryPath = selection.folderName;
+  settings.setupComplete = false;
+  const database = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(STORE_NAME, "readwrite");
+    const store = transaction.objectStore(STORE_NAME);
+    store.delete("directory");
+    store.put([...selected.values()], "androidVideoFiles");
+    store.put(settings, "settings");
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error ?? new Error("Could not save the selected USB folder."));
+    transaction.onabort = () => reject(transaction.error ?? new Error("Saving the USB folder was aborted."));
+  });
+  androidVideoFiles = selected;
+  selectedVideoFiles = new Map();
+  return selection.folderName;
+}
+
 export async function scanLibrary(): Promise<ScanResult> {
   const settings = await loadSettings();
   let folderName = settings.libraryPath;
-  let files = [...selectedVideoFiles].map(([relativePath, file]) => ({ relativePath, file }));
+  let files: Array<{ relativePath: string; size: number; file?: File }> = [...selectedVideoFiles].map(([relativePath, file]) => ({
+    relativePath,
+    file,
+    size: file.size,
+  }));
+  if (files.length === 0) {
+    const savedAndroidFiles =
+      androidVideoFiles.size > 0
+        ? [...androidVideoFiles.values()]
+        : await readValue<AndroidVideoFile[]>("androidVideoFiles") ?? [];
+    androidVideoFiles = new Map(savedAndroidFiles.map((file) => [file.relativePath, file]));
+    files = savedAndroidFiles.map((file) => ({
+      relativePath: file.relativePath,
+      size: file.size,
+    }));
+  }
   if (files.length === 0) {
     const directory = await getDirectory(false);
     folderName = directory.name;
@@ -356,9 +411,11 @@ export async function scanLibrary(): Promise<ScanResult> {
         if (entry.kind === "directory") {
           await visit(entry as VideoDirectoryHandle, relativePath);
         } else if (VIDEO_EXTENSIONS.has(extensionOf(entry.name))) {
+          const file = await (entry as VideoFileEntry).getFile();
           files.push({
             relativePath,
-            file: await (entry as VideoFileEntry).getFile(),
+            file,
+            size: file.size,
           });
         }
       }
@@ -383,7 +440,7 @@ export async function scanLibrary(): Promise<ScanResult> {
       title: cleaned.title || baseName,
       ...(cleaned.year === undefined ? {} : { year: cleaned.year }),
       relativePath: entry.relativePath,
-      size: entry.file.size,
+      size: entry.size,
     };
 
     if (settings.apiKey) {
@@ -591,6 +648,13 @@ export async function savePlaybackPosition(relativePath: string, currentTime: nu
 export async function getVideoObjectUrl(relativePath: string): Promise<string> {
   const selectedFile = selectedVideoFiles.get(relativePath);
   if (selectedFile) return URL.createObjectURL(selectedFile);
+  if (androidVideoFiles.size === 0) {
+    const savedAndroidFiles =
+      await readValue<AndroidVideoFile[]>("androidVideoFiles") ?? [];
+    androidVideoFiles = new Map(savedAndroidFiles.map((file) => [file.relativePath, file]));
+  }
+  const androidFile = androidVideoFiles.get(relativePath);
+  if (androidFile) return androidFile.uri;
   const directory = await getDirectory(false);
   const parts = relativePath.split("/");
   if (!parts.length || parts.some((part) => !part || part === "." || part === "..")) {

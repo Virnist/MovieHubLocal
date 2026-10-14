@@ -13,6 +13,7 @@ import {
   getSettings,
   saveSettings,
   scanLibrary,
+  selectAndroidLibraryFolder,
   selectLibraryFiles,
   type AppSettings,
   type LibraryMovie,
@@ -330,6 +331,11 @@ export default function App() {
           isRescanning={isScanning}
           onBrowseFolder={async (files, selection) => {
             const selectedPath = await selectLibraryFiles(files, selection);
+            if (selectedPath) setSettings(await getSettings());
+            return selectedPath;
+          }}
+          onBrowseAndroidFolder={async () => {
+            const selectedPath = await selectAndroidLibraryFolder();
             if (selectedPath) setSettings(await getSettings());
             return selectedPath;
           }}

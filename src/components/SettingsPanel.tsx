@@ -1,6 +1,7 @@
 import { useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { InstallAppButton } from "./InstallAppButton";
+import { isAndroidTvApp } from "../services/androidTv";
 import { SUPPORTED_LANGUAGES, type AppLanguage } from "../i18n";
 import type { AppSettings } from "../services/library";
 
@@ -10,6 +11,7 @@ interface SettingsPanelProps {
   isFirstRun?: boolean;
   isRescanning?: boolean;
   onBrowseFolder: (files: File[], selection: "folder" | "files") => Promise<string>;
+  onBrowseAndroidFolder: () => Promise<string | null>;
   onSave: (libraryPath: string, language: AppLanguage, credential: string) => Promise<void>;
   onLanguageChange: (language: AppLanguage) => Promise<void>;
   onRescan: () => Promise<void>;
@@ -23,6 +25,7 @@ export function SettingsPanel({
   isFirstRun = false,
   isRescanning = false,
   onBrowseFolder,
+  onBrowseAndroidFolder,
   onSave,
   onLanguageChange,
   onRescan,
@@ -45,6 +48,7 @@ export function SettingsPanel({
   );
   const rescanAfterFolderSelect = useRef(false);
   const folderSelectionType = useRef<"folder" | "files">("folder");
+  const isNativeAndroidTv = isAndroidTvApp();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -126,6 +130,21 @@ export function SettingsPanel({
     }
   }
 
+  async function handleAndroidFolderSelection(rescan = false) {
+    setIsBrowsing(true);
+    setMessage("");
+    try {
+      const selectedPath = await onBrowseAndroidFolder();
+      if (!selectedPath) return;
+      setLibraryPath(selectedPath);
+      if (rescan) await onRescan();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not open the USB folder.");
+    } finally {
+      setIsBrowsing(false);
+    }
+  }
+
   function handleLanguageListKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
@@ -172,7 +191,9 @@ export function SettingsPanel({
           <button
             type="button"
             disabled={isRescanning}
-            onClick={() => openFolderPicker(true)}
+            onClick={() => isNativeAndroidTv
+              ? void handleAndroidFolderSelection(true)
+              : openFolderPicker(true)}
             className="min-h-11 rounded-lg border border-zinc-700 px-4 font-semibold text-zinc-200 outline-none hover:bg-zinc-800 focus-visible:ring-4 focus-visible:ring-red-500 disabled:opacity-60"
           >
             {isRescanning ? t("scanning") : t("scan")}
@@ -181,7 +202,7 @@ export function SettingsPanel({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 sm:p-7">
-        {isFirstRun && (
+        {isFirstRun && !isNativeAndroidTv && (
           <div className="space-y-4">
             <p className="text-zinc-300">{t("welcomeDescription")}</p>
             <div className="rounded-xl border border-zinc-700 bg-zinc-950/70 p-4">
@@ -239,7 +260,22 @@ export function SettingsPanel({
               {t("chooseVideoFiles")}
             </button>
           </div>
-          <p className="mt-2 text-sm text-zinc-400">{t("videoFilesHint")}</p>
+          {isNativeAndroidTv && (
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => void handleAndroidFolderSelection()}
+                disabled={isSaving || isBrowsing}
+                className="min-h-12 w-full rounded-lg bg-red-600 px-4 font-bold text-white outline-none hover:bg-red-500 focus-visible:ring-4 focus-visible:ring-red-400 disabled:opacity-60"
+              >
+                {isBrowsing ? t("openingFolderPicker") : t("chooseUsbFolder")}
+              </button>
+              <p className="mt-2 text-sm text-zinc-400">{t("androidFolderHint")}</p>
+            </div>
+          )}
+          {!isNativeAndroidTv && (
+            <p className="mt-2 text-sm text-zinc-400">{t("videoFilesHint")}</p>
+          )}
           <p className="mt-2 text-sm text-zinc-400">{t("storageHint")}</p>
         </div>
         <div>

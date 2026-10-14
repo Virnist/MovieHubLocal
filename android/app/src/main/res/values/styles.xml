@@ -1,0 +1,11 @@
+<resources>
+    <style name="MovieHubTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#ef4444</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowBackground">#09090b</item>
+        <item name="android:navigationBarColor">#09090b</item>
+        <item name="android:statusBarColor">#09090b</item>
+    </style>
+</resources>

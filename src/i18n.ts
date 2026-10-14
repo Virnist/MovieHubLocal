@@ -196,6 +196,8 @@ const resources = {
       pageOf: "Page {{page}} of {{total}}",
       folderLabel: "Movie folder on this device",
       chooseFolder: "Select a folder on this device",
+      chooseUsbFolder: "Choose USB movie folder",
+      androidFolderHint: "Choose the movie folder on your USB drive. Android will ask you to grant access.",
       browseFolder: "Browse…",
       chooseVideoFiles: "Choose video files",
       videoFilesHint:
@@ -346,6 +348,8 @@ const resources = {
       pageOf: "Pagina {{page}} di {{total}}",
       folderLabel: "Cartella dei film su questo dispositivo",
       chooseFolder: "Seleziona una cartella su questo dispositivo",
+      chooseUsbFolder: "Scegli la cartella dei film USB",
+      androidFolderHint: "Scegli la cartella dei film sull'unità USB. Android ti chiederà di concedere l'accesso.",
       browseFolder: "Sfoglia…",
       chooseVideoFiles: "Scegli file video",
       videoFilesHint:
@@ -514,6 +518,8 @@ const resources = {
       pageOf: "Сторінка {{page}} з {{total}}",
       folderLabel: "Папка з фільмами на цьому пристрої",
       chooseFolder: "Виберіть папку на цьому пристрої",
+      chooseUsbFolder: "Вибрати папку з фільмами на USB",
+      androidFolderHint: "Виберіть папку з фільмами на USB-накопичувачі й надайте Android доступ до неї.",
       browseFolder: "Огляд…",
       chooseVideoFiles: "Вибрати відеофайли",
       videoFilesHint:
@@ -663,6 +669,8 @@ const resources = {
       pageOf: "Página {{page}} de {{total}}",
       folderLabel: "Carpeta de películas en este dispositivo",
       chooseFolder: "Selecciona una carpeta en este dispositivo",
+      chooseUsbFolder: "Elegir carpeta de películas USB",
+      androidFolderHint: "Elige la carpeta de películas de tu unidad USB. Android te pedirá permiso para acceder.",
       browseFolder: "Buscar…",
       chooseVideoFiles: "Elegir archivos de vídeo",
       videoFilesHint:
@@ -802,6 +810,8 @@ const resources = {
       pageOf: "Page {{page}} sur {{total}}",
       folderLabel: "Dossier de films sur cet appareil",
       chooseFolder: "Choisir un dossier sur cet appareil",
+      chooseUsbFolder: "Choisir le dossier de films USB",
+      androidFolderHint: "Choisissez le dossier de films sur votre clé USB. Android vous demandera l’autorisation d’y accéder.",
       browseFolder: "Parcourir…",
       chooseVideoFiles: "Choisir des fichiers vidéo",
       videoFilesHint:
@@ -941,6 +951,8 @@ const resources = {
       pageOf: "Seite {{page}} von {{total}}",
       folderLabel: "Filmordner auf diesem Gerät",
       chooseFolder: "Ordner auf diesem Gerät auswählen",
+      chooseUsbFolder: "USB-Filmordner auswählen",
+      androidFolderHint: "Wähle den Filmordner auf deinem USB-Laufwerk aus. Android fragt nach der Zugriffsberechtigung.",
       browseFolder: "Durchsuchen…",
       chooseVideoFiles: "Videodateien auswählen",
       videoFilesHint:
@@ -1080,6 +1092,8 @@ const resources = {
       pageOf: "Strona {{page}} z {{total}}",
       folderLabel: "Folder z filmami na tym urządzeniu",
       chooseFolder: "Wybierz folder na tym urządzeniu",
+      chooseUsbFolder: "Wybierz folder filmów USB",
+      androidFolderHint: "Wybierz folder filmów na dysku USB. Android poprosi o zgodę na dostęp.",
       browseFolder: "Przeglądaj…",
       chooseVideoFiles: "Wybierz pliki wideo",
       videoFilesHint:

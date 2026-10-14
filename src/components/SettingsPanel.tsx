@@ -87,7 +87,19 @@ export function SettingsPanel({
   function openFolderPicker(rescan = false, selection: "folder" | "files" = "folder") {
     rescanAfterFolderSelect.current = rescan;
     folderSelectionType.current = selection;
-    (selection === "folder" ? folderInput : videoInput).current?.click();
+    const input = (selection === "folder" ? folderInput : videoInput).current;
+    if (!input) return;
+
+    if (typeof input.showPicker === "function") {
+      try {
+        input.showPicker();
+        return;
+      } catch {
+        input.click();
+        return;
+      }
+    }
+    input.click();
   }
 
   async function handleFolderSelection(event: ChangeEvent<HTMLInputElement>) {
@@ -97,7 +109,12 @@ export function SettingsPanel({
     setIsBrowsing(true);
     setMessage("");
     try {
-      const selectedPath = await onBrowseFolder(files, folderSelectionType.current);
+      const selection =
+        folderSelectionType.current === "folder" &&
+        !files.some((file) => file.webkitRelativePath)
+          ? "files"
+          : folderSelectionType.current;
+      const selectedPath = await onBrowseFolder(files, selection);
       setLibraryPath(selectedPath);
       if (rescanAfterFolderSelect.current) await onRescan();
     } catch (error) {
